@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3.0
 #
 # GNU Radio Python Flow Graph
-# Title: Not titled yet
+# Title: Mitigacion ruido ISM 2.4 GHz
 # GNU Radio version: 3.10.9.2
 
 from PyQt5 import Qt
@@ -30,9 +30,9 @@ import sip
 class Proyecto1(gr.top_block, Qt.QWidget):
 
     def __init__(self):
-        gr.top_block.__init__(self, "Not titled yet", catch_exceptions=True)
+        gr.top_block.__init__(self, "Mitigacion ruido ISM 2.4 GHz", catch_exceptions=True)
         Qt.QWidget.__init__(self)
-        self.setWindowTitle("Not titled yet")
+        self.setWindowTitle("Mitigacion ruido ISM 2.4 GHz")
         qtgui.util.check_set_qss()
         try:
             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
@@ -235,7 +235,7 @@ class Proyecto1(gr.top_block, Qt.QWidget):
             noise_seed=0,
             block_tags=False)
         self.blocks_throttle2_0 = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
-        self.analog_sig_source_x_0 = analog.sig_source_c(samp_rate, analog.GR_COS_WAVE, 0, 0, 0, 0)
+        self.analog_sig_source_x_0 = analog.sig_source_c(samp_rate, analog.GR_COS_WAVE, 0, 1, 0, 0)
         self.analog_probe_avg_mag_sqrd_x_0_0 = analog.probe_avg_mag_sqrd_cf(0, 0.0001 )
         self.analog_probe_avg_mag_sqrd_x_0 = analog.probe_avg_mag_sqrd_cf(0, 0.0001 )
 

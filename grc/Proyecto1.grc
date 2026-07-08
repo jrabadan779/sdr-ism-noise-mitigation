@@ -22,7 +22,7 @@ options:
     run_options: prompt
     sizing_mode: fixed
     thread_safe_setters: ''
-    title: Not titled yet
+    title: Mitigacion ruido ISM 2.4 GHz
     window_size: (1000,1000)
   states:
     bus_sink: false
@@ -86,7 +86,7 @@ blocks:
   parameters:
     affinity: ''
     alias: ''
-    amp: '0'
+    amp: '1'
     comment: ''
     freq: '0'
     maxoutbuf: '0'
