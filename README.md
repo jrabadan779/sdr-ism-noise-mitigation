@@ -1,170 +1,118 @@
-# Caracterización y Mitigación de Ruido en Banda ISM 2.4 GHz (SDR · GNU Radio)
+# Mitigación de ruido en banda ISM 2.4 GHz con SDR y GNU Radio
 
-Banco de pruebas en GNU Radio que caracteriza empíricamente la degradación de un enlace en la banda ISM de 2.4 GHz (AWGN) e implementa mitigación de ruido mediante filtrado FIR digital en banda base. Se logra una mejora medida de la relación señal-ruido (SNR) de **+12.44 dB**.
+Reconstrucción de un proyecto de laboratorio en el que caracterizo cómo se degrada una señal en la banda de 2.4 GHz (la del Wi-Fi, Bluetooth, microondas...) cuando aparece ruido, y aplico un filtro FIR digital para recuperar relación señal-ruido. En las medidas que tomé, el filtro me da una mejora de SNR de **12.44 dB**.
 
-> **Front-end RF objetivo:** HackRF One. La validación empírica de este repositorio se realiza sobre un **banco de pruebas simulado** en GNU Radio (bloque *Channel Model*, AWGN), de modo que el modelo de canal, la métrica de SNR y el resultado son reproducibles sin depender del espectro real ni del hardware. La cadena de procesado (ajuste de ganancias TX/RX en banda base + FIR) es directamente transferible a una fuente HackRF.
+Un apunte sobre el montaje, para ser claro: el front-end pensado para esto es un HackRF One, pero las medidas de este repositorio las hice sobre un banco de pruebas en **simulación**, usando el bloque *Channel Model* de GNU Radio para inyectar ruido AWGN. Lo monté así para que el experimento sea reproducible sin depender del espectro real ni de tener el equipo delante; la cadena de procesado (ganancias en banda base + FIR) es la misma que aplicaría sobre una fuente HackRF real.
 
----
+## Qué hace, en corto
 
-## Objetivos
+- Genera una señal en banda base y le añade ruido, simulando un canal ISM 2.4 GHz contaminado.
+- Le pasa un filtro FIR paso-bajo que deja pasar la señal y recorta el ruido de las zonas del espectro donde no hay nada útil.
+- Mide la potencia antes y después de filtrar para calcular cuánto sube la SNR.
 
-- Caracterizar la degradación de un enlace en banda ISM 2.4 GHz bajo ruido aditivo gaussiano.
-- Diseñar e implementar un filtro FIR paso-bajo para mitigar el ruido fuera de banda.
-- Medir empíricamente la mejora de SNR y contrastarla con la predicción teórica.
+## Cómo lo monté
 
-## Especificaciones
+![Diagrama de bloques del sistema](media/diagrama_bloques.svg)
 
-| Parámetro | Valor |
-|---|---|
-| Frecuencia de muestreo (fs) | 20 MS/s |
-| Ancho de banda de análisis | 20 MHz |
-| Tipo de canal | AWGN (Channel Model, `noise_voltage=0.3`, seed fijo) |
-| Filtro | FIR paso-bajo, ventana Hamming |
-| Frecuencia de corte | 600 kHz |
-| Ancho de transición | 200 kHz |
-| Mejora de SNR medida | +12.44 dB |
+La lógica del flowgraph es sencilla: genero la señal, la ensucio con ruido, y a partir de ahí parto la cadena en dos ramas. Una la dejo intacta (mi referencia, el "antes") y la otra pasa por el filtro (el "después"). Cada rama tiene su propio visor de espectro y su medidor de potencia, así puedo comparar las dos en la misma ejecución sin desincronizarme.
 
-## Stack
+Trabajo con muestreo a 20 MS/s y una ventana de análisis de 20 MHz.
 
-GNU Radio Companion 3.10.9.2 · Python 3 · (HackRF One como front-end objetivo)
+## El filtro: por qué estos números
 
----
-
-## Arquitectura del sistema
-
-![Diagrama de bloques](media/diagrama_bloques.svg)
-
-La señal de interés se genera en banda base y se degrada con AWGN en el bloque *Channel Model* (equivalente a la contaminación del canal ISM 2.4 GHz). Tras el *Throttle*, la señal se divide en dos ramas paralelas:
-
-- **Rama baseline:** mide la potencia total sin procesar (referencia "antes").
-- **Rama mitigada:** aplica el FIR paso-bajo y mide la potencia residual (resultado "después").
-
-Cada rama dispone de su propio visualizador de espectro (*QT GUI Frequency Sink*) y su medidor de potencia (*Probe Avg Mag² → Number Sink*).
-
----
-
-## Metodología
-
-### 1. Modelo de canal
-
-El ruido se inyecta con `Channel Model` (AWGN, `noise_voltage = 0.3`). Se fija `noise_seed` para reproducibilidad. La potencia de ruido queda repartida uniformemente sobre los 20 MHz de la banda.
-
-### 2. Diseño del filtro FIR
-
-El filtro se calcula con `firdes.low_pass(gain, fs, cutoff, transition, window)`:
+El filtro lo genero con `firdes.low_pass`:
 
 ```python
 firdes.low_pass(1, 20e6, 600e3, 200e3, window.WIN_HAMMING, 6.76)
 ```
 
-**Fundamento del dimensionado.** La mejora de SNR por filtrado proviene de reducir el ancho de banda de ruido que llega al detector, conservando la señal:
+La clave que tardé en interiorizar es que la mejora de SNR no viene de "amplificar" la señal, sino de **reducir el ancho de banda por el que entra ruido**, dejando la señal intacta. La relación es:
 
 ```
 Mejora_SNR (dB) = 10 · log10( BW_ruido / BW_filtro )
 ```
 
-Para el objetivo de ~12 dB:
+Como quería apuntar a unos 12 dB, despejé el ancho de banda de paso que necesitaba:
 
 ```
-BW_filtro = BW_ruido / 10^(12/10) = 20 MHz / 15.85 ≈ 1.26 MHz
+BW_filtro = 20 MHz / 10^(12/10) = 20 MHz / 15.85 ≈ 1.26 MHz
 ```
 
-Con corte a 600 kHz (ancho de paso bilateral ≈ 1.2 MHz) se obtiene la mejora buscada.
+Por eso puse el corte en 600 kHz (ancho de paso bilateral de ~1.2 MHz). El ancho de transición (200 kHz) fija de paso la longitud del filtro: con ventana Hamming salen del orden de `3.3 · fs / Δf ≈ 330` coeficientes. Estrechar más la transición daría un filtro más selectivo pero con más carga de cálculo y más retardo, así que 200 kHz me pareció un compromiso razonable.
 
-**Longitud del filtro (nº de coeficientes).** Para el método de ventaneo, la longitud es inversamente proporcional al ancho de transición normalizado. Con ventana Hamming (factor ≈ 3.3):
+## Cómo medí la SNR
 
-```
-N ≈ 3.3 · fs / Δf_transición = 3.3 · (20e6 / 200e3) ≈ 330 taps
-```
+Aquí hay un detalle que se pasa por alto: el medidor de potencia (*Probe Avg Mag²*) mide potencia **total**, señal más ruido mezclados. Para separar las dos componentes ejecuté el flowgraph dos veces:
 
-Un ancho de transición más estrecho aumenta la selectividad a costa de más coeficientes (mayor carga computacional y retardo de grupo).
+- Con la señal encendida (`Amplitude = 1`) mido la potencia total.
+- Con la señal apagada (`Amplitude = 0`) mido solo el ruido.
 
-### 3. Medición de SNR (método ON/OFF)
-
-El *Probe Avg Mag²* mide potencia **total** (señal + ruido). Para separar ambas componentes se ejecuta el flowgraph dos veces:
-
-- **Señal ON** (`Amplitude = 1`): potencia total.
-- **Señal OFF** (`Amplitude = 0`): potencia de ruido aislada.
-
-La potencia de señal se obtiene por resta (`ON − OFF`), y de ahí la SNR de cada rama.
-
----
+Restando (ON − OFF) saco la potencia de señal limpia, y de ahí la SNR de cada rama.
 
 ## Resultados
 
-### Mediciones
+Estas son las cuatro lecturas de potencia que anoté:
 
 | Medición | Baseline | Filtrada |
 |---|---|---|
-| Amplitude = 1 (señal ON) | 1.088968 | 1.005122 |
-| Amplitude = 0 (solo ruido) | 0.088417 | 0.005031 |
+| Señal ON (`Amplitude = 1`) | 1.088968 | 1.005122 |
+| Solo ruido (`Amplitude = 0`) | 0.088417 | 0.005031 |
 
-### Cálculos
+Y el cálculo:
 
 ```
 P_señal_baseline = 1.088968 − 0.088417 = 1.000551
-P_señal_filtrada = 1.005122 − 0.005031 = 1.000091   (pérdida de inserción ≈ 0.002 dB)
+P_señal_filtrada = 1.005122 − 0.005031 = 1.000091
 
 SNR_antes   = 10·log10(1.000551 / 0.088417) = 10.54 dB
 SNR_después = 10·log10(1.000091 / 0.005031) = 22.98 dB
 
-MEJORA = 22.98 − 10.54 = 12.44 dB
+Mejora = 22.98 − 10.54 = 12.44 dB
 ```
 
-### Verificación cruzada
+Lo que más me convenció de que la medida era buena: la señal casi no se toca al filtrar (pasa de 1.000551 a 1.000091, una pérdida de inserción de ~0.002 dB), así que la mejora viene íntegra de haber quitado ruido, no de deformar la señal. Además, la reducción de ruido medida directamente, `10·log10(0.088417/0.005031) = 12.45 dB`, coincide con la predicción teórica de arriba.
 
-La reducción de ruido medida, `10·log10(0.088417 / 0.005031) = 12.45 dB`, coincide con la predicción teórica por reducción de ancho de banda (~12.2 dB). El filtro conserva la señal casi intacta (pérdida de inserción ≈ 0.002 dB), confirmando que la mejora procede exclusivamente de la mitigación de ruido fuera de banda.
+En el espectro se ve claramente. Con la señal encendida, el suelo de ruido fuera de banda se desploma unos 70 dB tras el filtro:
 
-### Espectros
+![Espectros con señal encendida](media/espectro_on.png)
 
-| Antes (baseline) | Después (filtrado) |
-|---|---|
-| Suelo de ruido ≈ −50 dB en toda la banda | Ruido fuera de banda desplomado a ≈ −125 dB |
+Y con la señal apagada se ve el ruido puro antes y después, que es de donde salen las lecturas OFF:
 
-Ver `media/espectro_on.png` y `media/espectro_off.png`.
+![Espectros solo con ruido](media/espectro_off.png)
 
----
+## Un problema que me encontré
 
-## Discusión: límite físico del filtrado
+Al conectar el medidor de potencia me saltaba este error al ejecutar:
 
-La mejora por estrechamiento del filtro **no es ilimitada**. El ancho de paso solo puede reducirse hasta el ancho de banda de la propia señal:
+```
+ValueError: port number 0 exceeds max of (none)
+```
 
-- Señal de banda estrecha (tono, como en este banco de pruebas) → margen de mejora amplio.
-- Señal de banda ancha (Wi-Fi real ocupa ~20 MHz) → filtrar por debajo de su ancho **corta la señal** (distorsión, ISI, pérdida de datos).
+Me costó un rato darme cuenta: el bloque `Probe Avg Mag²` en su variante *Complex* (`probe_avg_mag_sqrd_c`) no tiene salida por streaming, es un sumidero que se consulta por código con `.level()`. Por eso GNU Radio se quejaba de que intentaba conectar un puerto que no existe. La solución fue usar la variante **Complex → Float** (`probe_avg_mag_sqrd_cf`), que sí expone una salida float conectable al display numérico.
 
-El óptimo teórico es el **filtro adaptado** (*matched filter*), ajustado exactamente al ancho de banda de la señal. Por ello, en sistemas reales el filtrado se combina con otras técnicas: selección de canal, espectro ensanchado, codificación de canal y antenas directivas.
+## Hasta dónde llega el filtro
 
----
-
-## Troubleshooting
-
-**`ValueError: port number 0 exceeds max of (none)` al conectar el Probe.**
-El bloque `Probe Avg Mag²` en variante *Complex* (`probe_avg_mag_sqrd_c`) es un sumidero puro: no tiene puerto de salida streaming (se consulta por código con `.level()`). Solución: usar la variante **Complex → Float** (`probe_avg_mag_sqrd_cf`), que expone una salida float conectable al *Number Sink*.
-
----
+Una conclusión importante del experimento: no puedes estrechar el filtro indefinidamente para ganar más SNR. El ancho de paso solo se puede reducir hasta el ancho de banda de la propia señal. En mi banco de pruebas la señal es prácticamente un tono (muy estrecha), así que tengo mucho margen; pero un Wi-Fi real ocupa ~20 MHz, y si filtrara por debajo de eso empezaría a recortar la señal misma (distorsión, pérdida de datos). El óptimo teórico sería un filtro adaptado al ancho exacto de la señal. Por eso en la práctica el filtrado se combina con otras técnicas: cambiar de canal, espectro ensanchado, codificación, antenas directivas.
 
 ## Estructura del repositorio
 
 ```
 .
 ├── README.md
-├── src/
-│   └── Proyecto1.py          # Flowgraph generado (Python)
-├── grc/
-│   └── Proyecto1.grc         # Flowgraph editable (GNU Radio Companion)
+├── src/Proyecto1.py          # Flowgraph generado (Python)
+├── grc/Proyecto1.grc         # Flowgraph editable (GNU Radio Companion)
 └── media/
-    ├── diagrama_bloques.svg  # Arquitectura del sistema
-    ├── flowgraph_grc.png     # Captura del flowgraph en GRC
-    ├── espectro_on.png       # Espectros con señal (Amplitude=1)
-    └── espectro_off.png      # Espectros solo ruido (Amplitude=0)
+    ├── diagrama_bloques.svg
+    ├── espectro_on.png        # Espectros con señal (Amplitude=1)
+    └── espectro_off.png       # Espectros solo ruido (Amplitude=0)
 ```
 
-## Ejecución
+## Cómo ejecutarlo
+
+Desde GNU Radio Companion: abrir `grc/Proyecto1.grc`, Generate (F5), Run (F6). O directamente:
 
 ```bash
-# Desde GNU Radio Companion: abrir grc/Proyecto1.grc → Generate (F5) → Run (F6)
-# O directamente:
 python3 src/Proyecto1.py
 ```
 
-Para reproducir la medición de SNR: ejecutar con `Amplitude = 1`, anotar potencias; ejecutar con `Amplitude = 0`, anotar potencias; aplicar las fórmulas de la sección Resultados.
+Para reproducir las medidas: ejecutar con `Amplitude = 1` y anotar las dos potencias, luego con `Amplitude = 0` y anotar las otras dos, y aplicar las fórmulas de la sección de resultados.
