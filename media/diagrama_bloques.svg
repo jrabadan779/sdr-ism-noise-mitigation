@@ -1,20 +1,21 @@
 <svg viewBox="0 0 900 460" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+      <path d="M0,0 L8,3 L0,6 Z" fill="#94a3b8"/>
     </marker>
     <style>
-      .box { fill:#f8fafc; stroke:#334155; stroke-width:2; rx:8; }
-      .src { fill:#dbeafe; stroke:#1d4ed8; }
-      .chan{ fill:#fee2e2; stroke:#b91c1c; }
-      .fir { fill:#dcfce7; stroke:#15803d; }
-      .sink{ fill:#f1f5f9; stroke:#475569; }
-      .lbl { font-size:13px; fill:#0f172a; font-weight:600; text-anchor:middle; }
-      .sub { font-size:10px; fill:#475569; text-anchor:middle; }
-      .wire{ stroke:#334155; stroke-width:2; fill:none; marker-end:url(#arrow); }
-      .branch{ font-size:11px; fill:#64748b; font-weight:600; }
+      .box { fill:#1e293b; stroke:#94a3b8; stroke-width:2; }
+      .src { fill:#1e3a5f; stroke:#60a5fa; }
+      .chan{ fill:#4a1d1d; stroke:#f87171; }
+      .fir { fill:#14352a; stroke:#4ade80; }
+      .lbl { font-size:13px; fill:#ffffff; font-weight:600; text-anchor:middle; }
+      .sub { font-size:10px; fill:#cbd5e1; text-anchor:middle; }
+      .wire{ stroke:#94a3b8; stroke-width:2; fill:none; marker-end:url(#arrow); }
+      .branch{ font-size:11px; fill:#e2e8f0; font-weight:600; }
     </style>
   </defs>
+
+  <rect x="0" y="0" width="900" height="460" fill="#0d1117"/>
 
   <!-- Signal Source -->
   <rect class="box src" x="20" y="190" width="130" height="60" rx="8"/>
@@ -27,31 +28,29 @@
   <text class="sub" x="255" y="232">AWGN · nv=0.3</text>
 
   <!-- Throttle -->
-  <rect class="box sink" x="360" y="190" width="120" height="60" rx="8"/>
+  <rect class="box" x="360" y="190" width="120" height="60" rx="8"/>
   <text class="lbl" x="420" y="214">Throttle</text>
   <text class="sub" x="420" y="232">20 MS/s</text>
 
-  <!-- Wires main chain -->
   <line class="wire" x1="150" y1="220" x2="188" y2="220"/>
   <line class="wire" x1="320" y1="220" x2="358" y2="220"/>
 
-  <!-- Split node -->
-  <circle cx="510" cy="220" r="4" fill="#334155"/>
+  <circle cx="510" cy="220" r="4" fill="#94a3b8"/>
   <line class="wire" x1="480" y1="220" x2="508" y2="220"/>
 
   <!-- ===== BASELINE branch (top) ===== -->
   <text class="branch" x="600" y="70">RAMA BASELINE (referencia)</text>
   <path class="wire" d="M510,216 L510,100 L560,100"/>
-  <rect class="box sink" x="560" y="75" width="140" height="50" rx="8"/>
+  <rect class="box" x="560" y="75" width="140" height="50" rx="8"/>
   <text class="lbl" x="630" y="96">Freq Sink</text>
   <text class="sub" x="630" y="113">Espectro baseline</text>
 
   <path class="wire" d="M510,220 L510,160 L560,160"/>
-  <rect class="box sink" x="560" y="140" width="150" height="50" rx="8"/>
+  <rect class="box" x="560" y="140" width="150" height="50" rx="8"/>
   <text class="lbl" x="635" y="161">Probe Avg Mag² (cf)</text>
   <text class="sub" x="635" y="178">Potencia total</text>
   <line class="wire" x1="710" y1="165" x2="748" y2="165"/>
-  <rect class="box sink" x="750" y="140" width="120" height="50" rx="8"/>
+  <rect class="box" x="750" y="140" width="120" height="50" rx="8"/>
   <text class="lbl" x="810" y="161">Number Sink</text>
   <text class="sub" x="810" y="178">P_baseline</text>
 
@@ -62,20 +61,18 @@
   <text class="lbl" x="610" y="329">FIR Low Pass</text>
   <text class="sub" x="610" y="346">cut=600k · Hamming</text>
 
-  <!-- FIR split -->
-  <circle cx="700" cy="335" r="4" fill="#334155"/>
+  <circle cx="700" cy="335" r="4" fill="#94a3b8"/>
   <line class="wire" x1="670" y1="335" x2="698" y2="335"/>
 
   <path class="wire" d="M700,331 L700,290 L740,290"/>
-  <rect class="box sink" x="742" y="265" width="140" height="50" rx="8"/>
+  <rect class="box" x="742" y="265" width="140" height="50" rx="8"/>
   <text class="lbl" x="812" y="286">Freq Sink</text>
   <text class="sub" x="812" y="303">Espectro filtrado</text>
 
   <path class="wire" d="M700,335 L700,400 L740,400"/>
-  <rect class="box sink" x="742" y="375" width="150" height="50" rx="8"/>
+  <rect class="box" x="742" y="375" width="150" height="50" rx="8"/>
   <text class="lbl" x="817" y="396">Probe → Number</text>
   <text class="sub" x="817" y="413">P_filtrada</text>
 
-  <!-- Title -->
-  <text x="20" y="40" font-size="16" font-weight="700" fill="#0f172a">Mitigación de ruido ISM 2.4 GHz — Cadena de procesado (fs = 20 MS/s)</text>
+  <text x="20" y="40" font-size="16" font-weight="700" fill="#ffffff">Mitigación de ruido ISM 2.4 GHz — Cadena de procesado (fs = 20 MS/s)</text>
 </svg>

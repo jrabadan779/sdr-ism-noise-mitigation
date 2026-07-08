@@ -1,6 +1,6 @@
 # Mitigación de ruido en banda ISM 2.4 GHz con SDR y GNU Radio
 
-Este proyecto lo hice originalmente como práctica de laboratorio, pero perdí los archivos y lo he reconstruido de cero para documentarlo bien. La idea: caracterizar cómo se degrada una señal en la banda de 2.4 GHz (la del WiFi, Bluetooth, el microondas...) cuando hay ruido, y aplicar un filtro FIR digital para recuperar relación señal-ruido. Con las medidas que tomé, la mejora de SNR sale de **12.44 dB**.
+Proyecto de laboratorio con SDR. La idea: caracterizar cómo se degrada una señal en la banda de 2.4 GHz (la del WiFi, Bluetooth, el microondas...) cuando hay ruido, y aplicar un filtro FIR digital para recuperar relación señal-ruido. Con las medidas que tomé, la mejora de SNR sale de **12.44 dB**.
 
 Aclaración sobre el montaje: el front-end previsto para esto es un HackRF One, pero las medidas de este repo las hice sobre un banco de pruebas en simulación, con el bloque Channel Model de GNU Radio inyectando ruido AWGN. Así el experimento es reproducible sin depender del espectro real ni de tener el equipo delante, y la cadena de procesado (ganancias en banda base + FIR) es la misma que aplicaría con una fuente HackRF real.
 
@@ -89,7 +89,7 @@ Y con la señal apagada se ve el ruido puro antes y después, que es de donde sa
 
 ![Espectros solo con ruido](media/espectro_off.png)
 
-## Un problema que me comí
+## Un error que no me dejaba compilar y ejecutar
 
 Al conectar el medidor de potencia me saltaba esto al ejecutar:
 
